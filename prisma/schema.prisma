@@ -1,0 +1,23 @@
+generator client { provider = "prisma-client" output = "../src/generated/prisma" }
+datasource db { provider = "postgresql" }
+enum Role { OWNER ADMIN RECEPTIONIST TRAINER MEMBER }
+enum MemberStatus { ACTIVE INACTIVE FROZEN CANCELLED }
+enum MembershipStatus { PENDING ACTIVE EXPIRED FROZEN CANCELLED }
+enum PaymentMethod { CASH BANK BKASH NAGAD CARD OTHER }
+enum EntryType { INCOME EXPENSE REFUND }
+enum MediaType { IMAGE YOUTUBE VIMEO }
+model User { id String @id @default(cuid()) email String @unique passwordHash String name String role Role @default(MEMBER) createdAt DateTime @default(now()) member Member? }
+model Member { id String @id @default(cuid()) memberCode String @unique name String phone String @unique email String? imageUrl String? address String? emergencyPhone String? joinedAt DateTime @default(now()) status MemberStatus @default(ACTIVE) notes String? userId String? @unique user User? @relation(fields:[userId],references:[id]) memberships Membership[] checkIns CheckIn[] payments Payment[] }
+model MembershipPlan { id String @id @default(cuid()) name String description String? durationDays Int price Decimal @db.Decimal(12,2) joiningFee Decimal @default(0) @db.Decimal(12,2) active Boolean @default(true) featured Boolean @default(false) benefits Json? memberships Membership[] createdAt DateTime @default(now()) }
+model Membership { id String @id @default(cuid()) memberId String planId String member Member @relation(fields:[memberId],references:[id]) plan MembershipPlan @relation(fields:[planId],references:[id]) beginsAt DateTime endsAt DateTime status MembershipStatus @default(PENDING) totalDue Decimal @db.Decimal(12,2) createdAt DateTime @default(now()) payments Payment[] @@index([memberId,endsAt]) }
+model Payment { id String @id @default(cuid()) receiptNumber String @unique memberId String membershipId String? member Member @relation(fields:[memberId],references:[id]) membership Membership? @relation(fields:[membershipId],references:[id]) amount Decimal @db.Decimal(12,2) method PaymentMethod receivedAt DateTime @default(now()) notes String? reference String? recordedById String? @@index([receivedAt]) }
+model CheckIn { id String @id @default(cuid()) memberId String member Member @relation(fields:[memberId],references:[id]) at DateTime @default(now()) method String @default("MANUAL") @@index([memberId,at]) }
+model FinanceEntry { id String @id @default(cuid()) type EntryType category String amount Decimal @db.Decimal(12,2) occurredAt DateTime @default(now()) description String? paymentMethod PaymentMethod @default(CASH) reference String? enteredById String? voidedAt DateTime? @@index([occurredAt,type]) }
+model Employee { id String @id @default(cuid()) name String phone String position String salary Decimal? @db.Decimal(12,2) joinedAt DateTime @default(now()) active Boolean @default(true) }
+model Equipment { id String @id @default(cuid()) name String category String imageUrl String? acquiredAt DateTime? purchaseCost Decimal? @db.Decimal(12,2) status String @default("AVAILABLE") nextServiceAt DateTime? maintenance Maintenance[] }
+model Maintenance { id String @id @default(cuid()) equipmentId String equipment Equipment @relation(fields:[equipmentId],references:[id]) description String cost Decimal @default(0) @db.Decimal(12,2) servicedAt DateTime @default(now()) }
+model MediaCategory { id String @id @default(cuid()) name String slug String @unique sortOrder Int @default(0) assets MediaAsset[] }
+model MediaAsset { id String @id @default(cuid()) title String mediaType MediaType sourceUrl String thumbnailUrl String? description String? categoryId String category MediaCategory @relation(fields:[categoryId],references:[id]) published Boolean @default(true) sortOrder Int @default(0) createdAt DateTime @default(now()) }
+model SiteSetting { key String @id value Json updatedAt DateTime @updatedAt }
+model Lead { id String @id @default(cuid()) name String phone String message String? interestedPlanId String? status String @default("NEW") createdAt DateTime @default(now()) }
+model AuditLog { id String @id @default(cuid()) actorId String? action String entity String entityId String? detail Json? createdAt DateTime @default(now()) }
